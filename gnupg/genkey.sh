@@ -16,7 +16,8 @@ MASTERKEYSIZE=rsa4096
 SUBKEYSIZE=rsa2048
 PASSWORD=secret
 EXPIRATION=1y
-BATCH="--batch --pinentry-mode=loopback --passphrase $PASSWORD"
+HOMEDIR=$PWD/.gnupg
+BATCH="--homedir=$HOMEDIR --batch --pinentry-mode=loopback --passphrase $PASSWORD"
 # disable batch
 #BATCH=""
 
@@ -26,30 +27,31 @@ fi
 
 # create master key
 echo "Creating masterkey with $MASTERKEYSIZE for $IDENTITY..."
-gpg $BATCH --quick-gen-key "$IDENTITY" $MASTERKEYSIZE cert
+gpg $BATCH --quick-gen-key "$IDENTITY" $MASTERKEYSIZE cert || exit 1
 # get fingerprint
-FINGERPRINT=`gpg --list-keys --with-colons $IDENTITY | awk -F: '/^fpr:/ { print $10 }'`
+FINGERPRINT=`gpg --homedir=$HOMEDIR --list-keys --with-colons $IDENTITY | awk -F: '/^fpr:/ { print $10 }'`
 echo "Fingerprint=$FINGERPRINT"
 # create subkeys
 echo "Creating signing subkey with $SUBKEYSIZE..."
-gpg $BATCH --quick-addkey $FINGERPRINT $SUBKEYSIZE sign $EXPIRATION
+gpg $BATCH --quick-addkey $FINGERPRINT $SUBKEYSIZE sign $EXPIRATION || exit 1
 echo "Creating encryption subkey with $SUBKEYSIZE..."
-gpg $BATCH --quick-addkey $FINGERPRINT $SUBKEYSIZE encr $EXPIRATION
+gpg $BATCH --quick-addkey $FINGERPRINT $SUBKEYSIZE encr $EXPIRATION || exit 1
 echo "Creating authentication subkey with $SUBKEYSIZE..."
-gpg $BATCH --quick-addkey $FINGERPRINT $SUBKEYSIZE auth $EXPIRATION
+gpg $BATCH --quick-addkey $FINGERPRINT $SUBKEYSIZE auth $EXPIRATION || exit 1
 
 # export data
 mkdir "$IDENTITY"
 echo "Exporting public keys..."
-gpg $BATCH --export --armor $FINGERPRINT > "$IDENTITY/$FINGERPRINT.pub"
+gpg $BATCH --export --armor $FINGERPRINT > "$IDENTITY/$FINGERPRINT.pub" || exit 1
 echo "Exporting private keys..."
-gpg $BATCH --export-secret-keys --armor $FINGERPRINT > "$IDENTITY/$FINGERPRINT.prv"
+gpg $BATCH --export-secret-keys --armor $FINGERPRINT > "$IDENTITY/$FINGERPRINT.prv" || exit 1
 echo "Exporting private subkeys..."
-gpg $BATCH --export-secret-subkeys --armor $FINGERPRINT > "$IDENTITY/$FINGERPRINT.prv-sub"
-if [ -f ~/.gnupg/openpgp-revocs.d/$FINGERPRINT.rev ]; then
+gpg $BATCH --export-secret-subkeys --armor $FINGERPRINT > "$IDENTITY/$FINGERPRINT.prv-sub" || exit 1
+if [ -f "$HOMEDIR/openpgp-revocs.d/$FINGERPRINT.rev" ]; then
     echo "Copying revocation certificate..."
-    cp ~/.gnupg/openpgp-revocs.d/$FINGERPRINT.rev "$IDENTITY/$FINGERPRINT.rev"
+    cp $HOMEDIR/openpgp-revocs.d/$FINGERPRINT.rev "$IDENTITY/$FINGERPRINT.rev"
 else
     echo "Creating revocation certificate..."
     gpg --gen-revoke --armor $FINGERPRINT > "$IDENTITY/$FINGERPRINT.rev"
 fi
+
