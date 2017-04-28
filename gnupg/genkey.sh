@@ -29,7 +29,7 @@ fi
 echo "Creating masterkey with $MASTERKEYSIZE for $IDENTITY..."
 gpg $BATCH --quick-gen-key "$IDENTITY" $MASTERKEYSIZE cert || exit 1
 # get fingerprint
-FINGERPRINT=`gpg --homedir=$HOMEDIR --list-keys --with-colons $IDENTITY | awk -F: '/^fpr:/ { print $10 }'`
+FINGERPRINT=`gpg --homedir=$HOMEDIR --list-keys --with-colons "$IDENTITY" | awk -F: '/^fpr:/ { print $10 }'`
 echo "Fingerprint=$FINGERPRINT"
 # create subkeys
 echo "Creating signing subkey with $SUBKEYSIZE..."
